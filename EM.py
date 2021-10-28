@@ -2,6 +2,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 
 import numpy as np
+import matplotlib
 import scipy.stats
 import math
 import cv2
@@ -15,7 +16,7 @@ from scipy import ndimage
 
 # input fllename >> output 3d array
 def read_img(filename):
-    img_3d = ndimage.imread(filename)
+    img_3d = matplotlib.pyplot.imread(filename)
 
     small = cv2.resize(img_3d, (0, 0), fx=0.1, fy=0.1)
     blur = cv2.blur(small, (4, 4))
@@ -26,12 +27,12 @@ def read_img(filename):
 def flatten_img(img_3d):
     x, y, z = img_3d.shape
     img_2d = img_3d.reshape(x*y, z)
-    img_2d = np.array(img_2d, dtype = np.float)
+    img_2d = np.array(img_2d, dtype=np.float)
     return img_2d
 
 
 # input 2d array >> output 3d array
-def recover_img(img_2d, vis = False, X=80, Y=80, Z=3):
+def recover_img(img_2d, vis=False, X=80, Y=80, Z=3):
     #img_2d = cv2.resize(img_2d, (0, 0), fx=10, fy=10)
     img_2d = (img_2d * 255).astype(np.uint8)
     recover_img = img_2d.reshape(X, Y, Z)
@@ -56,9 +57,10 @@ def kmeans_init(img, k):
 def update_responsibility(img, means, cov, pis, k):
     # responsibilities: i th pixels, j th class
     # pis * gaussian.pdf
-    responsibilities = np.array([pis[j] * scipy.stats.multivariate_normal.pdf(img, mean=means[j], cov=cov[j]) for j in range(k)]).T
+    responsibilities = np.array(
+        [pis[j] * scipy.stats.multivariate_normal.pdf(img, mean=means[j], cov=cov[j]) for j in range(k)]).T
     # normalize for each row
-    norm = np.sum(responsibilities, axis = 1)
+    norm = np.sum(responsibilities, axis=1)
     # convert to column vector
     norm = np.reshape(norm, (len(norm), 1))
     responsibilities = responsibilities / norm
@@ -67,7 +69,7 @@ def update_responsibility(img, means, cov, pis, k):
 
 # update pi for each class of Gaussian model
 def update_pis(responsibilities):
-    pis = np.sum(responsibilities, axis = 0) / responsibilities.shape[0]
+    pis = np.sum(responsibilities, axis=0) / responsibilities.shape[0]
     return pis
 
 
@@ -102,18 +104,19 @@ def update_covariance(img, responsibilities, means):
 
 # M-step: choose a label that maximise the likelihood
 def update_labels(responsibilities):
-    labels = np.argmax(responsibilities, axis = 1)
+    labels = np.argmax(responsibilities, axis=1)
     return labels
 
 
 def update_loglikelihood(img, means, cov, pis, k):
-    pdf = np.array([pis[j] * scipy.stats.multivariate_normal.pdf(img, mean=means[j], cov=cov[j]) for j in range(k)])
-    log_ll = np.log(np.sum(pdf, axis = 0))
+    pdf = np.array([pis[j] * scipy.stats.multivariate_normal.pdf(img,
+                   mean=means[j], cov=cov[j]) for j in range(k)])
+    log_ll = np.log(np.sum(pdf, axis=0))
     log_ll_sum = np.sum(log_ll)
     return log_ll_sum
 
 
-def EM_cluster(img, k, error = 10e-4, iter_n = 9999):
+def EM_cluster(img, k, error=10e-4, iter_n=9999):
     #  init setting
     cnt = 0
     likelihood_arr = []
@@ -137,7 +140,8 @@ def EM_cluster(img, k, error = 10e-4, iter_n = 9999):
         likelihood_arr.append(new_likelihood)
         end_dt = datetime.datetime.now()
         diff = relativedelta(end_dt, start_dt)
-        print("iter: %s, time interval: %s:%s:%s:%s" % (cnt, diff.hours, diff.minutes, diff.seconds, diff.microseconds))
+        print("iter: %s, time interval: %s:%s:%s:%s" %
+              (cnt, diff.hours, diff.minutes, diff.seconds, diff.microseconds))
     likelihood_arr = np.array(likelihood_arr)
     print('Converge at iteration {}'.format(cnt + 1))
     return labels, means, cov, pis, likelihood_arr
@@ -152,7 +156,7 @@ def main():
         plt.figure()
         plt.axis("off")
         plt.imshow(orig_img)
-        plt.title('Original Image');
+        plt.title('Original Image')
         plt.show()
 
         img = flatten_img(orig_img)
@@ -161,7 +165,7 @@ def main():
         plt.figure()
         plt.axis("off")
         plt.imshow(em_img)
-        plt.title('Image Segmented by EM Algorithm');
+        plt.title('Image Segmented by EM Algorithm')
         plt.show()
     except Exception as ex:
         print(ex)
